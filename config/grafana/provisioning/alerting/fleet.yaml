@@ -28,7 +28,7 @@ groups:
                 type: prometheus
                 uid: cee3l7v6urpj4f
               editorMode: code
-              expr: up{job="node-exporter"}
+              expr: up{job="node-exporter",instance!="node-exporter:9100"}
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -56,14 +56,14 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: "{{ $labels.instance }} {{ $labels.mountpoint }} is forecast to fill within 7 days"
+          summary: "{{ $labels.instance }} root is over 80% and forecast to fill within 7 days"
         labels:
           severity: warning
         isPaused: false
         data:
           - refId: A
             relativeTimeRange:
-              from: 21600
+              from: 86400
               to: 0
             datasourceUid: cee3l7v6urpj4f
             model:
@@ -71,7 +71,7 @@ groups:
                 type: prometheus
                 uid: cee3l7v6urpj4f
               editorMode: code
-              expr: predict_linear(node_filesystem_avail_bytes{job="node-exporter",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}[6h], 7 * 24 * 3600)
+              expr: '(predict_linear(node_filesystem_avail_bytes{job="node-exporter",mountpoint="/",fstype!~"tmpfs|overlay|squashfs",instance!="node-exporter:9100"}[24h], 7 * 24 * 3600) < 0) and ((1 - node_filesystem_avail_bytes{job="node-exporter",mountpoint="/",fstype!~"tmpfs|overlay|squashfs",instance!="node-exporter:9100"} / node_filesystem_size_bytes{job="node-exporter",mountpoint="/",fstype!~"tmpfs|overlay|squashfs",instance!="node-exporter:9100"}) > 0.80)'
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200

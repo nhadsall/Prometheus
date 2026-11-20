@@ -1,12 +1,13 @@
 {
   "uid": "fleet-hosts",
   "title": "Fleet hosts",
+  "description": "One row per server. Root disk is the / filesystem. A host name opens Node Exporter Full for that machine.",
   "tags": ["fleet", "node-exporter", "php-fpm"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "refresh": "30s",
-  "time": { "from": "now-6h", "to": "now" },
+  "time": { "from": "now-1h", "to": "now" },
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "editable": false,
@@ -16,198 +17,360 @@
   "panels": [
     {
       "id": 1,
-      "type": "stat",
-      "title": "Hosts up",
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "type": "table",
+      "title": "Hosts",
+      "description": "CPU, memory, and root disk are percents. Load / CPU is the 1-minute load divided by the number of cores. The node_exporter container is not a server and is left out.",
+      "gridPos": { "h": 13, "w": 24, "x": 0, "y": 0 },
       "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
-      "targets": [{ "refId": "A", "expr": "sum(up{job=\"node-exporter\"})" }],
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
+          "expr": "label_replace(up{job=\"node-exporter\",instance!=\"node-exporter:9100\"}, \"host\", \"$1\", \"instance\", \"([^:]+):.*\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
+          "expr": "label_replace(100 - (avg by (instance) (rate(node_cpu_seconds_total{job=\"node-exporter\",mode=\"idle\",instance!=\"node-exporter:9100\"}[5m])) * 100), \"host\", \"$1\", \"instance\", \"([^:]+):.*\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": ""
+        },
+        {
+          "refId": "C",
+          "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
+          "expr": "label_replace(100 * (1 - node_memory_MemAvailable_bytes{job=\"node-exporter\",instance!=\"node-exporter:9100\"} / node_memory_MemTotal_bytes{job=\"node-exporter\",instance!=\"node-exporter:9100\"}), \"host\", \"$1\", \"instance\", \"([^:]+):.*\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": ""
+        },
+        {
+          "refId": "D",
+          "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
+          "expr": "label_replace(100 * (1 - node_filesystem_avail_bytes{job=\"node-exporter\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\",instance!=\"node-exporter:9100\"} / node_filesystem_size_bytes{job=\"node-exporter\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\",instance!=\"node-exporter:9100\"}), \"host\", \"$1\", \"instance\", \"([^:]+):.*\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": ""
+        },
+        {
+          "refId": "E",
+          "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
+          "expr": "label_replace(node_load1{job=\"node-exporter\",instance!=\"node-exporter:9100\"} / on(instance) count by (instance) (node_cpu_seconds_total{job=\"node-exporter\",mode=\"idle\",instance!=\"node-exporter:9100\"}), \"host\", \"$1\", \"instance\", \"([^:]+):.*\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "seriesToColumns",
+          "options": { "byField": "host" }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Time 1": true,
+              "Time 2": true,
+              "Time 3": true,
+              "Time 4": true,
+              "Time 5": true,
+              "__name__": true,
+              "__name__ 1": true,
+              "__name__ 2": true,
+              "__name__ 3": true,
+              "__name__ 4": true,
+              "__name__ 5": true,
+              "instance": true,
+              "instance 1": true,
+              "instance 2": true,
+              "instance 3": true,
+              "instance 4": true,
+              "instance 5": true,
+              "job": true,
+              "job 1": true,
+              "job 2": true,
+              "job 3": true,
+              "job 4": true,
+              "job 5": true,
+              "device": true,
+              "device 1": true,
+              "fstype": true,
+              "fstype 1": true,
+              "mountpoint": true,
+              "mountpoint 1": true
+            },
+            "renameByName": {
+              "host": "Host",
+              "Value #A": "Up",
+              "Value #B": "CPU",
+              "Value #C": "Memory",
+              "Value #D": "Root disk",
+              "Value #E": "Load / CPU"
+            },
+            "indexByName": {
+              "Host": 0,
+              "Up": 1,
+              "CPU": 2,
+              "Memory": 3,
+              "Root disk": 4,
+              "Load / CPU": 5
+            }
+          }
+        }
+      ],
       "fieldConfig": {
         "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "inspect": false
+          },
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
-            ]
+            "steps": [{ "color": "text", "value": null }]
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Host" },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Host detail",
+                    "url": "/d/rYdddlPWk/node-exporter-full?var-job=node-exporter&var-node=${__data.fields.Host}:9100",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Up" },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": { "text": "down", "color": "red", "index": 0 },
+                      "1": { "text": "up", "color": "green", "index": 1 }
+                    }
+                  }
+                ]
+              },
+              { "id": "custom.cellOptions", "value": { "type": "color-text" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "CPU" },
+            "properties": [
+              { "id": "unit", "value": "percent" },
+              { "id": "decimals", "value": 0 },
+              { "id": "min", "value": 0 },
+              { "id": "max", "value": 100 },
+              { "id": "custom.cellOptions", "value": { "type": "gauge", "mode": "basic" } },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "yellow", "value": 70 },
+                    { "color": "red", "value": 90 }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Memory" },
+            "properties": [
+              { "id": "unit", "value": "percent" },
+              { "id": "decimals", "value": 0 },
+              { "id": "min", "value": 0 },
+              { "id": "max", "value": 100 },
+              { "id": "custom.cellOptions", "value": { "type": "gauge", "mode": "basic" } },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "yellow", "value": 70 },
+                    { "color": "red", "value": 90 }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Root disk" },
+            "properties": [
+              { "id": "unit", "value": "percent" },
+              { "id": "decimals", "value": 0 },
+              { "id": "min", "value": 0 },
+              { "id": "max", "value": 100 },
+              { "id": "custom.cellOptions", "value": { "type": "gauge", "mode": "basic" } },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "yellow", "value": 70 },
+                    { "color": "red", "value": 85 }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Load / CPU" },
+            "properties": [
+              { "id": "decimals", "value": 2 },
+              { "id": "min", "value": 0 },
+              { "id": "custom.cellOptions", "value": { "type": "gauge", "mode": "basic" } },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "yellow", "value": 0.7 },
+                    { "color": "red", "value": 1 }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
       },
-      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": { "show": false, "reducer": ["sum"], "countRows": false, "fields": "" },
+        "sortBy": [{ "displayName": "Root disk", "desc": true }]
+      }
     },
     {
       "id": 2,
-      "type": "stat",
-      "title": "Hosts down",
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "type": "table",
+      "title": "PHP-FPM pools with real work",
+      "description": "The status scrape counts as one active worker, so a pool at 1 is idle. This lists pools above 1, and any pool with requests waiting.",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 13 },
       "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
-      "targets": [{ "refId": "A", "expr": "count(up{job=\"node-exporter\"} == 0) or vector(0)" }],
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
+          "expr": "label_join(label_replace(phpfpm_active_processes{job=\"php-fpm\"} and (phpfpm_active_processes{job=\"php-fpm\"} > 1 or phpfpm_listen_queue{job=\"php-fpm\"} > 0), \"host\", \"$1\", \"instance\", \"([^:]+):.*\"), \"row\", \"/\", \"host\", \"pool\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": ""
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
+          "expr": "label_join(label_replace(phpfpm_listen_queue{job=\"php-fpm\"} and (phpfpm_active_processes{job=\"php-fpm\"} > 1 or phpfpm_listen_queue{job=\"php-fpm\"} > 0), \"host\", \"$1\", \"instance\", \"([^:]+):.*\"), \"row\", \"/\", \"host\", \"pool\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "seriesToColumns",
+          "options": { "byField": "row" }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Time 1": true,
+              "Time 2": true,
+              "__name__": true,
+              "__name__ 1": true,
+              "__name__ 2": true,
+              "instance": true,
+              "instance 1": true,
+              "instance 2": true,
+              "job": true,
+              "job 1": true,
+              "job 2": true,
+              "scrape_uri": true,
+              "scrape_uri 1": true,
+              "scrape_uri 2": true,
+              "host 1": true,
+              "host 2": true,
+              "pool 1": true,
+              "pool 2": true,
+              "row 1": true,
+              "row 2": true
+            },
+            "renameByName": {
+              "host": "Host",
+              "pool": "Pool",
+              "row": "Host / pool",
+              "Value #A": "Active",
+              "Value #B": "Queue"
+            },
+            "indexByName": {
+              "Host": 0,
+              "Pool": 1,
+              "Active": 2,
+              "Queue": 3,
+              "Host / pool": 4
+            }
+          }
+        }
+      ],
       "fieldConfig": {
         "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": { "type": "auto" },
+            "inspect": false
+          },
+          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 1 }
-            ]
+            "steps": [{ "color": "text", "value": null }]
           }
         },
-        "overrides": []
-      },
-      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
-    },
-    {
-      "id": 7,
-      "type": "stat",
-      "title": "Pools queued",
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
-      "targets": [{ "refId": "A", "expr": "count(phpfpm_listen_queue > 0) or vector(0)" }],
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 1 }
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Queue" },
+            "properties": [
+              { "id": "custom.cellOptions", "value": { "type": "color-text" } },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "red", "value": 1 }
+                  ]
+                }
+              }
             ]
           }
-        },
-        "overrides": []
+        ]
       },
-      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
-    },
-    {
-      "id": 8,
-      "type": "stat",
-      "title": "Soonest disk fill (days)",
-      "description": "Only hosts whose root filesystem is shrinking. Blank means none are filling.",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
-      "targets": [{
-        "refId": "A",
-        "expr": "(node_filesystem_avail_bytes{job=\"node-exporter\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"} / -deriv(node_filesystem_avail_bytes{job=\"node-exporter\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"}[6h])) / 86400 > 0"
-      }],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "d",
-          "decimals": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 7 },
-              { "color": "green", "value": 30 }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["min"] } }
-    },
-    {
-      "id": 9,
-      "type": "stat",
-      "title": "Highest load / CPU",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
-      "targets": [{
-        "refId": "A",
-        "expr": "max(node_load1{job=\"node-exporter\"} / count by (instance) (node_cpu_seconds_total{job=\"node-exporter\",mode=\"idle\"}))"
-      }],
-      "fieldConfig": {
-        "defaults": {
-          "decimals": 2,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 2 }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
-    },
-    {
-      "id": 10,
-      "type": "timeseries",
-      "title": "Days until root fills",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
-      "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
-      "targets": [{
-        "refId": "A",
-        "legendFormat": "{{instance}}",
-        "expr": "(node_filesystem_avail_bytes{job=\"node-exporter\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"} / -deriv(node_filesystem_avail_bytes{job=\"node-exporter\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"}[6h])) / 86400 > 0"
-      }],
-      "fieldConfig": { "defaults": { "unit": "d", "min": 0 }, "overrides": [] }
-    },
-    {
-      "id": 11,
-      "type": "timeseries",
-      "title": "Load per CPU",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
-      "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
-      "targets": [{
-        "refId": "A",
-        "legendFormat": "{{instance}}",
-        "expr": "node_load1{job=\"node-exporter\"} / count by (instance) (node_cpu_seconds_total{job=\"node-exporter\",mode=\"idle\"})"
-      }],
-      "fieldConfig": { "defaults": { "decimals": 2 }, "overrides": [] }
-    },
-    {
-      "id": 4,
-      "type": "timeseries",
-      "title": "Memory used",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
-      "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
-      "targets": [{
-        "refId": "A",
-        "legendFormat": "{{instance}}",
-        "expr": "100 * (1 - node_memory_MemAvailable_bytes{job=\"node-exporter\"} / node_memory_MemTotal_bytes{job=\"node-exporter\"})"
-      }],
-      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 }, "overrides": [] }
-    },
-    {
-      "id": 3,
-      "type": "timeseries",
-      "title": "CPU",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
-      "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
-      "targets": [{
-        "refId": "A",
-        "legendFormat": "{{instance}}",
-        "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{job=\"node-exporter\",mode=\"idle\"}[5m])) * 100)"
-      }],
-      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 }, "overrides": [] }
-    },
-    {
-      "id": 12,
-      "type": "timeseries",
-      "title": "PHP-FPM listen queue",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
-      "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
-      "targets": [{
-        "refId": "A",
-        "legendFormat": "{{instance}} {{pool}}",
-        "expr": "phpfpm_listen_queue > 0"
-      }],
-      "fieldConfig": { "defaults": { "min": 0 }, "overrides": [] }
-    },
-    {
-      "id": 13,
-      "type": "timeseries",
-      "title": "PHP-FPM active workers",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
-      "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
-      "targets": [{
-        "refId": "A",
-        "legendFormat": "{{instance}} {{pool}}",
-        "expr": "topk(15, phpfpm_active_processes)"
-      }],
-      "fieldConfig": { "defaults": { "min": 0 }, "overrides": [] }
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": { "show": false, "reducer": ["sum"], "countRows": false, "fields": "" },
+        "sortBy": [{ "displayName": "Active", "desc": true }]
+      }
     }
   ]
 }
