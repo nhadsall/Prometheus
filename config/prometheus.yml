@@ -21,3 +21,17 @@ scrape_configs:
           - sjm:9100
           - spirit:9100
           - tekton:9100
+
+  - job_name: php-fpm
+    scrape_interval: 30s
+    scrape_timeout: 25s
+    static_configs:
+      - targets:
+          - css:9253
+          - curo:9253
+          - gkc:9253
+          - key:9253
+          - oak:9253
+          - red:9253
+          - spirit:9253
+          - tekton:9253
