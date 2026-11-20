@@ -5,7 +5,7 @@
   "tags": ["fleet", "node-exporter", "php-fpm"],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 3,
+  "version": 4,
   "refresh": "30s",
   "time": { "from": "now-1h", "to": "now" },
   "fiscalYearStartMonth": 0,
@@ -26,7 +26,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
-          "expr": "label_replace(up{job=\"node-exporter\",instance!=\"node-exporter:9100\"}, \"host\", \"$1\", \"instance\", \"([^:]+):.*\")",
+          "expr": "label_replace(sum by (instance) (up{job=\"node-exporter\",instance!=\"node-exporter:9100\"}), \"host\", \"$1\", \"instance\", \"([^:]+):.*\")",
           "format": "table",
           "instant": true,
           "legendFormat": ""
@@ -271,7 +271,7 @@
         {
           "refId": "A",
           "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
-          "expr": "label_join(label_replace(phpfpm_active_processes{job=\"php-fpm\"} and (phpfpm_active_processes{job=\"php-fpm\"} > 1 or phpfpm_listen_queue{job=\"php-fpm\"} > 0), \"host\", \"$1\", \"instance\", \"([^:]+):.*\"), \"row\", \"/\", \"host\", \"pool\")",
+          "expr": "label_join(label_replace(sum by (instance, pool) (phpfpm_active_processes{job=\"php-fpm\"} and (phpfpm_active_processes{job=\"php-fpm\"} > 1 or phpfpm_listen_queue{job=\"php-fpm\"} > 0)), \"host\", \"$1\", \"instance\", \"([^:]+):.*\"), \"row\", \"/\", \"host\", \"pool\")",
           "format": "table",
           "instant": true,
           "legendFormat": ""
@@ -279,7 +279,7 @@
         {
           "refId": "B",
           "datasource": { "type": "prometheus", "uid": "cee3l7v6urpj4f" },
-          "expr": "label_join(label_replace(phpfpm_listen_queue{job=\"php-fpm\"} and (phpfpm_active_processes{job=\"php-fpm\"} > 1 or phpfpm_listen_queue{job=\"php-fpm\"} > 0), \"host\", \"$1\", \"instance\", \"([^:]+):.*\"), \"row\", \"/\", \"host\", \"pool\")",
+          "expr": "label_join(label_replace(sum by (instance, pool) (phpfpm_listen_queue{job=\"php-fpm\"} and (phpfpm_active_processes{job=\"php-fpm\"} > 1 or phpfpm_listen_queue{job=\"php-fpm\"} > 0)), \"host\", \"$1\", \"instance\", \"([^:]+):.*\"), \"row\", \"/\", \"host\", \"pool\")",
           "format": "table",
           "instant": true,
           "legendFormat": ""
